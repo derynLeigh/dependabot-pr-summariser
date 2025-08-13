@@ -38,9 +38,9 @@ function formatPRSummary(prs) {
 
 // Main workflow
 async function main() {
-  const owner = "your-org";
-  const repo = "your-repo";
-  const installationId = 123456;
+  const owner = "derynLeigh";
+  const repo = "dependabot-pr-summariser";
+  const installationId = Iv23ligt92Jfu3LOSCpB;
 
   const installationToken = await getInstallationToken(installationId);
   const prs = await fetchDependabotPRs(owner, repo, installationToken);
