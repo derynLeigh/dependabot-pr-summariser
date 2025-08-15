@@ -1,52 +1,49 @@
-const { App, Octokit } = require("@octokit/app");
-const fs = require("fs");
+import { createAppAuth } from "@octokit/auth-app";
+import dotenv from "dotenv";
+import { fetchDependabotPRs } from "./github.js";
+import { writeHTMLFile } from "./html.js";
 
-// Load GitHub App credentials
-const appId = process.env.GITHUB_APP_ID;
-const privateKey = fs.readFileSync("../pr-summariser.2025-08-12.private-key.pem", "utf8");
+dotenv.config();
 
-// Initialize GitHub App
-const app = new App({ appId, privateKey });
+const privateKey = process.env.GITHUB_PRIVATE_KEY;
 
-// Get installation token
-async function getInstallationToken(installationId) {
-  const { token } = await app.getInstallationAccessToken({ installationId });
-  return token;
-}
+const auth = createAppAuth({
+  appId: process.env.GITHUB_APP_ID,
+  privateKey,
+});
 
-// Fetch Dependabot PRs
-async function fetchDependabotPRs(owner, repo, installationToken) {
-  const octokit = new Octokit({ auth: installationToken });
-
-  const { data } = await octokit.pulls.list({
-    owner,
-    repo,
-    state: "open",
-  });
-
-  return data.filter((pr) => pr.user.login === "dependabot[bot]");
-}
-
-// Format PR summary
-function formatPRSummary(prs) {
-  let summary = "### 📝 Daily Dependabot PR Summary\n\n";
-  prs.forEach((pr) => {
-    summary += `- [${pr.title}](${pr.html_url})\n`;
-  });
-  return summary;
-}
-
-// Main workflow
 async function main() {
-  const owner = "derynLeigh";
-  const repo = "dependabot-pr-summariser";
-  const installationId = Iv23ligt92Jfu3LOSCpB;
+  try {
+    const { token } = await auth({ type: "installation", installationId: process.env.GITHUB_INSTALLATION_ID });
+    console.log("Installation Token:", token);
 
-  const installationToken = await getInstallationToken(installationId);
-  const prs = await fetchDependabotPRs(owner, repo, installationToken);
-  const summary = formatPRSummary(prs);
+    const owner = "derynLeigh";
+    const repos = ['techronymsService', 'techronyms-user-service', 'dependabot-pr-summariser'];
+    let allPRs = [];
 
-  console.log(summary);
+    for (const repo of repos) {
+      console.log(`Fetching PRs from ${repo}...`);
+      const prs = await fetchDependabotPRs(token, owner, repo);
+      allPRs = allPRs.concat(prs);
+    }
+    
+    console.log('All Dependabot PRs:', allPRs);
+
+    const summary = formatPRSummary(allPRs);
+    await writeHTMLFile("summary.html", summary);
+    console.log("Summary written to summary.html!");
+  } catch (error) {
+    console.error("Error:", error);
+  }
+}
+
+function formatPRSummary(prs) {
+  let summary = "<h1>📝 Daily Dependabot PR Summary</h1>\n<ul>\n";
+  prs.forEach((pr) => {
+    summary += `  <li><a href="${pr.html_url}">${pr.title}</a> (Repo: ${pr.head.repo.name}</li>\n`;
+  });
+  summary += "</ul>";
+  return summary;
 }
 
 main();
