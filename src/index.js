@@ -1,41 +1,17 @@
-import { createAppAuth } from "@octokit/auth-app";
-import dotenv from "dotenv";
-import { fetchDependabotPRs } from "./github.js";
-import { writeHTMLFile } from "./html.js";
+import { fetchAllDependabotPRs } from './github.js';
+import { writeHTMLFile } from './html.js';
 
-dotenv.config();
-
-const privateKey = process.env.GITHUB_PRIVATE_KEY;
-
-const auth = createAppAuth({
-  appId: process.env.GITHUB_APP_ID,
-  privateKey,
-});
-
-async function main() {
+export async function generateSummary() {
   try {
-    const { token } = await auth({ type: "installation", installationId: process.env.GITHUB_INSTALLATION_ID });
-    console.log("Installation Token:", token);
-
-    const owner = "derynLeigh";
-    const repos = ['techronymsService', 'techronyms-user-service', 'dependabot-pr-summariser'];
-    let allPRs = [];
-
-    for (const repo of repos) {
-      console.log(`Fetching PRs from ${repo}...`);
-      const prs = await fetchDependabotPRs(token, owner, repo);
-      allPRs = allPRs.concat(prs);
-    }
-    
-    console.log('All Dependabot PRs:', allPRs);
-
-    const summary = formatPRSummary(allPRs);
-    await writeHTMLFile("summary.html", summary);
-    console.log("Summary written to summary.html!");
+    const prs = await fetchAllDependabotPRs();
+    const summary = formatPRSummary(prs);
+    await writeHTMLFile('summary.html', summary);
+    console.log('Summary written to summary.html!');
   } catch (error) {
-    console.error("Error:", error);
+    console.error('Error:', error);
   }
 }
 
-
-main();
+if (import.meta.url === `file://${process.argv[1]}`) {
+  generateSummary();
+}
