@@ -4,7 +4,9 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "node src/index.js"
+    "start": "node dist/server.js",
+    "build": "tsc",
+    "dev": "tsc --watch & nodemon dist/server.js"
   },
   "keywords": [],
   "author": "",
@@ -17,9 +19,16 @@
     "@octokit/core": "7.0.3",
     "@octokit/rest": "22.0.0",
     "cors": "2.8.5",
-    "express": "5.1.0",
-    "node-cron": "4.2.1",
     "dotenv": "17.2.1",
-    "fs": "0.0.1-security"
+    "express": "5.1.0",
+    "fs": "0.0.1-security",
+    "node-cron": "4.2.1"
+  },
+  "devDependencies": {
+    "@octokit/types": "14.1.0",
+    "@types/cors": "2.8.19",
+    "@types/express": "5.0.3",
+    "@types/node": "24.3.0",
+    "typescript": "5.9.2"
   }
 }
