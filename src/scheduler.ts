@@ -1,19 +1,13 @@
 import cron from 'node-cron';
 import fs from 'fs';
 import { fetchAllDependabotPRs } from './github.js';
-import type { AuthConfig, DependabotPR } from './github.js';
-
-interface SchedulerConfig {
-  cronSchedule: string;
-  outputPath: string;
-  auth: AuthConfig;
-  owner: string;
-  repos: string[];
-}
+import type { AuthConfig } from './types/auth.js';
+import type { SchedulerConfig } from './types/schedulerTypes.js';
+import { PRdto } from './types/ui-pr.js';
 
 const DEFAULT_CONFIG: SchedulerConfig = {
   cronSchedule: '0 7 * * *',
-  outputPath: 'summary.html',
+  outputPath: 'summary.json',
   auth: {
     GITHUB_APP_ID: process.env.GITHUB_APP_ID!,
     GITHUB_PRIVATE_KEY: process.env.GITHUB_PRIVATE_KEY!,
@@ -33,22 +27,15 @@ export function scheduleDailySummary(
   const mergedConfig: SchedulerConfig = {
     ...DEFAULT_CONFIG,
     ...config,
-    auth: {
-      ...DEFAULT_CONFIG.auth,
-      ...config.auth,
-    },
   };
-
-  validateConfig(mergedConfig);
-
   cron.schedule(mergedConfig.cronSchedule, async () => {
     try {
-      const prs = await fetchAllDependabotPRs(
+      const prs: PRdto[] = await fetchAllDependabotPRs(
         mergedConfig.auth,
         mergedConfig.owner,
         mergedConfig.repos
       );
-      storeDailySummary(prs);
+      storeDailySummary(prs, mergedConfig.outputPath);
       logSuccess(prs.length);
     } catch (error: unknown) {
       handleSchedulerError(error);
@@ -56,20 +43,20 @@ export function scheduleDailySummary(
   });
 }
 
-function storeDailySummary(prs: DependabotPR[]): void {
+function storeDailySummary(prs: PRdto[], outputPath: string): void {
   const summary = {
     generatedAt: new Date().toISOString(),
     count: prs.length,
-    prs: prs.map((pr) => ({
-      id: pr.id,
-      title: pr.title,
-      url: pr.html_url,
-      repo: pr.head.repo.name,
-      createdAt: pr.created_at,
-      updatedAt: pr.updated_at,
+    prs: prs.map((p) => ({
+      id: p.id,
+      title: p.title,
+      url: p.url,
+      repo: p.repo,
+      createdAt: p.createdAt,
+      updatedAt: p.updatedAt,
     })),
   };
-  fs.writeFileSync('data/daily-summary.json', JSON.stringify(summary));
+  fs.writeFileSync(outputPath, JSON.stringify(summary, null, 2), 'utf8');
 }
 
 function validateConfig(config: SchedulerConfig): void {
